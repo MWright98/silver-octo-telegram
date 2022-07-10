@@ -39,6 +39,7 @@ function saveRecord(record) {
 
   // add record to your store with add method
   moneyObjectStore.add(record);
+  alert('Transaction saved! We will submit this transaction when an internet connection is established.');
 }
 
 function uploadMoney() {
