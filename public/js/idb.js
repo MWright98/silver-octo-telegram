@@ -1,90 +1,90 @@
-// create variable to hold db connection
+// Database connection variable
 let db;
 
-// establish a connection to IndexedDB database called 'budget_tracker' and set it to version 1
-const request = indexedDB.open('budget_tracker', 1);
+// Connect to indexed db and open budget_tracker database v1
+const request = indexedDB.open("budget_tracker", 1);
 
-// this event will emit if the database version changes (nonexistant to version 1, v1 to v2, etc.)
-request.onupgradeneeded = function(event) {
-  // save a reference to the database 
+// executes when database version changes
+request.onupgradeneeded = function (event) {
+  // database reference
   const db = event.target.result;
-  // create an object store (table) called `new_money`, set it to have an auto incrementing primary key of sorts 
-  db.createObjectStore('new_money', { autoIncrement: true });
+  // create 'new_money' object store and give it auto incrementing ids
+  db.createObjectStore("new_money", { autoIncrement: true });
 };
 
-// upon a successful 
-request.onsuccess = function(event) {
-  // when db is successfully created with its object store (from onupgradedneeded event above) or simply established a connection, save reference to db in global variable
+// executes when db is succesfully connected
+request.onsuccess = function (event) {
+  // database reference
   db = event.target.result;
 
-  // check if app is online, if yes run uploadMoney() function to send all local db data to api
+  // check for online status
   if (navigator.onLine) {
-    // we haven't created this yet, but we will soon, so let's comment it out for now
-     uploadMoney();
+    uploadMoney();
   }
 };
 
-request.onerror = function(event) {
-  // log error here
+//Error log
+request.onerror = function (event) {
   console.log(event.target.errorCode);
 };
 
-// This function will be executed if we attempt to submit a new transaction and there's no internet connection
+// Save records when there is no connection
 function saveRecord(record) {
-  // open a new transaction with the database with read and write permissions 
-  const transaction = db.transaction(['new_money'], 'readwrite');
+  //open new readwrite db transaction
+  const transaction = db.transaction(["new_money"], "readwrite");
 
-  // access the object store for `new_money`
-  const moneyObjectStore = transaction.objectStore('new_money');
+  // access `new_money` object store
+  const moneyObjectStore = transaction.objectStore("new_money");
 
-  // add record to your store with add method
+  // add record to store with
   moneyObjectStore.add(record);
-  alert('Transaction saved! We will submit this transaction when an internet connection is established.');
+  alert(
+    "Transaction saved! We will submit this transaction when an internet connection is established."
+  );
 }
 
 function uploadMoney() {
-  // open a transaction on your db
-  const transaction = db.transaction(['new_money'], 'readwrite');
+  // open transactoin
+  const transaction = db.transaction(["new_money"], "readwrite");
 
-  // access your object store
-  const moneyObjectStore = transaction.objectStore('new_money');
+  // access object store
+  const moneyObjectStore = transaction.objectStore("new_money");
 
-  // get all records from store and set to a variable
+  // get all records from store
   const getAll = moneyObjectStore.getAll();
 
-  // more to come...
-  // upon a successful .getAll() execution, run this function
-getAll.onsuccess = function() {
-    // if there was data in indexedDb's store, let's send it to the api server
+  //executes if getAll succeeds
+  getAll.onsuccess = function () {
+    // send data to API server
     if (getAll.result.length > 0) {
-      fetch('/api/transaction', {
-        method: 'POST',
+      fetch("/api/transaction", {
+        method: "POST",
         body: JSON.stringify(getAll.result),
         headers: {
-          Accept: 'application/json, text/plain, */*',
-          'Content-Type': 'application/json'
-        }
+          Accept: "application/json, text/plain, */*",
+          "Content-Type": "application/json",
+        },
       })
-        .then(response => response.json())
-        .then(serverResponse => {
+        .then((response) => response.json())
+        .then((serverResponse) => {
           if (serverResponse.message) {
             throw new Error(serverResponse);
           }
-          // open one more transaction
-          const transaction = db.transaction(['new_money'], 'readwrite');
-          // access the new_money object store
-          const moneyObjectStore = transaction.objectStore('new_money');
-          // clear all items in your store
+          // open transaction
+          const transaction = db.transaction(["new_money"], "readwrite");
+          // access new_money object store
+          const moneyObjectStore = transaction.objectStore("new_money");
+          // clear all items in new_money object store
           moneyObjectStore.clear();
 
-          alert('All saved transactions has been submitted!');
+          alert("All saved transactions has been submitted!");
         })
-        .catch(err => {
+        .catch((err) => {
           console.log(err);
         });
     }
   };
 }
 
-// listen for app coming back online
-window.addEventListener('online', uploadMoney);
+// listen for online status
+window.addEventListener("online", uploadMoney);
